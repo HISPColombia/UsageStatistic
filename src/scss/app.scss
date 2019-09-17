@@ -1,0 +1,164 @@
+@import "~susy";
+@import "../../node_modules/d2-ui/scss/HeaderBar";
+@import "../../node_modules/d2-ui/scss/DataTable";
+
+$left-bar-width: 290px;
+$primary1Color: #F1D43A;
+$primary2Color: #E9B626;
+$primary3Color: #C38B15;
+$accent1Color: #F5555D;
+$accent2Color: #F5F5F5;
+$accent3Color: #9E9E9E;
+$textColor: #212121;
+$alternateTextColor: #ffffff;
+$left-bar-width: 295px;
+
+/* APP SPECIFIC STYLES */
+$main-color: $primary1Color;
+
+.appheader{
+  //max-width: $left-bar-width - 17;
+  position:fixed;
+  background-color: #f3f3f3;
+  padding-left:1em;
+  font-size:22px;
+}
+
+.snackbar{
+  left: 2rem;
+  right: initial;
+}
+
+.wrapper{
+  min-width: 910px;
+  position: relative;
+}
+
+.helpDialogTitle{
+    background:$primary1Color;
+    color:$alternateTextColor;
+}
+
+.paper{
+  padding:1em;
+  margin:.5em;
+  float:left;
+}
+
+.left{
+  float:left;
+}
+
+.menu, .translations {
+  padding-left:.5em;
+}
+
+.debugBox{
+  clear:both;
+  font-size:60%;
+}
+
+.subdued {
+  color: $accent3Color;
+}
+
+.title_description {
+  font-size: 80%;
+}
+
+.termDivider {
+  background-color: $primary3Color !important;
+}
+.separator{
+  height: 4em;
+}
+/* End Style*/
+
+html {
+  background: #f3f3f3;
+  font-family: 'Roboto', sans-serif;
+}
+
+.app {
+  padding-top: 3rem;
+}
+.app-wrapper {
+  margin-top: 4rem;
+}
+
+.left-bar {
+  width: $left-bar-width;
+  position: fixed;
+  bottom: 0;
+  top: 0;
+  left: 0;
+  padding-top: 3rem;
+}
+
+.content-area {
+  padding-left: $left-bar-width;
+  max-width: 75%;
+  min-width: 400px;
+  margin-bottom: 64px;
+}
+
+.data-table__headers__header {
+  border-bottom: 1px solid #bdbdbd;
+}
+
+.data-table__rows__row {
+  &__column {
+    border-bottom: 1px solid #bdbdbd;
+    transition: background 0ms;
+  }
+
+  &:hover {
+    .data-table__rows__row__column {
+      background-color: #f0f0f0;
+    }
+  }
+
+  &:last-child .data-table__rows__row__column {
+    border: none;
+  }
+}
+
+.data-table__context-menu {
+  background-color: transparent;
+  border-color: transparent;
+}
+
+.transition-mount,
+.transition-unmount {
+  transition: 150ms ease-out;
+  transform: translate(0,0) scale(1) rotateZ(0deg);
+  opacity: 1;
+
+  &.card {
+    transition-duration: 75ms;
+  }
+
+  &-active {
+    &.fab {
+      transform: translate(0,0) scale(0.0) rotateZ(-90deg);
+      opacity: 0.5;
+    }
+  }
+
+  &.fab:hover>div>button>div>div {
+    transform: rotateZ(90deg);
+  }
+}
+
+/* Layout front*/
+
+.container {
+  display: grid;
+  grid-template-columns: 300px auto;
+  grid-column-gap: 15px;
+
+}
+.item {
+  padding: 8px;
+  //border: '1px solid red';
+}
