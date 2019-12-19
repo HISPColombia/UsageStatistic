@@ -16,12 +16,13 @@ import actions from '../actions';
 import ChartLogins from './Chart.component';
 import FilterGroups from './Filter.UserGroup.component.js';
 
+import FilterBy from './Filter.component.js';
 import LoadingMask from 'd2-ui/lib/loading-mask/LoadingMask.component';
 //the day ranges for displaying data
 const loginStatusRanges = [7, 15, 30, 60, 'Older','None'];
 const loginStatusColors = [green300, lime300 , yellow300, orange300, deepOrange300, red300];
 
-const DASH_USERGROUPS_CODE = 'BATapp_ShowOnDashboard';
+//const DASH_USERGROUPS_CODE = 'BATapp_ShowOnDashboard';
 
 const styles={
   textSeach:{
@@ -34,7 +35,7 @@ export default React.createClass({
 
   propTypes: {
     d2: React.PropTypes.object,
-    groups: React.PropTypes.object.isRequired,
+    //groups: React.PropTypes.array.isRequired,
     ouRoot: React.PropTypes.object.isRequired,
   },
 
@@ -53,7 +54,9 @@ export default React.createClass({
       waiting: 0,
       processing:false,
       renderChart:false,
-      renderListGroups:false
+      renderListGroups:false,
+      filterBy: 'none',
+      ouRoot:{}
     };
   },
 
@@ -78,22 +81,30 @@ export default React.createClass({
   initReport() {
   
     let groups = this.props.groups;
-    let filtered = this.filterGroups(groups);
-    let arrUg=Object.keys(filtered)
-    for (let ug of arrUg ) {
-      this.getGroupLoginStats(ug).then(res => {
-        filtered[ug]['data'] = res;
-        if(arrUg[arrUg.length-1]==ug){
-          this.setState({
-            userGroupsFiltered: filtered,
-            userGroups: this.props.groups,
-            waiting: 0,
-            renderListGroups:true,
-            renderChart:false          
-          })
-        }        
-      });
-    }
+    this.setState({
+      userGroupsFiltered: [],
+      userGroups: this.props.groups,
+      waiting: 0,
+      ouRoot: this.props.ouRoot,
+      renderListGroups:true,
+      renderChart:false          
+    })
+   // let filtered = this.filterGroups(groups);
+    //let arrUg=Object.keys(filtered)
+    // for (let ug of arrUg ) {
+    //   this.getGroupLoginStats(ug).then(res => {
+    //     filtered[ug]['data'] = res;
+    //     if(arrUg[arrUg.length-1]==ug){
+    //       this.setState({
+    //         userGroupsFiltered: filtered,
+    //         userGroups: this.props.groups,
+    //         waiting: 0,
+    //         renderListGroups:true,
+    //         renderChart:false          
+    //       })
+    //     }        
+    //   });
+    // }
   },
 
 
@@ -133,38 +144,38 @@ export default React.createClass({
   },
 
   //get the UID for our secret sauce attribute
-  getAttributeID() {
-    if (this.state.attributeID !== '') {
-      return this.state.attributeID;
-    }
-    for (let a of Object.keys(this.props.attribs)) {
-      if (this.props.attribs[a] === DASH_USERGROUPS_CODE) {
-        this.setState({ attributeID: a,renderChart: false });
-        return a;
-      }
-    }
-    return '';
-  },
+  // getAttributeID() {
+  //   if (this.state.attributeID !== '') {
+  //     return this.state.attributeID;
+  //   }
+  //   for (let a of Object.keys(this.props.attribs)) {
+  //     if (this.props.attribs[a] === DASH_USERGROUPS_CODE) {
+  //       this.setState({ attributeID: a,renderChart: false });
+  //       return a;
+  //     }
+  //   }
+  //   return '';
+  // },
   //filter out all non FILTER attributed groups
-  filterGroups(groups) {
-    //find the user group attrib ID for displayable UserGroups on the dashboard
-    let attributeID = this.getAttributeID();
+  // filterGroups(groups) {
+  //   //find the user group attrib ID for displayable UserGroups on the dashboard
+  //   let attributeID = this.getAttributeID();
 
-    //only keep the groups that are in our DASH_USERGROUPS_CODE
-    let g = {};
-    for (let ug of Object.keys(groups)) {
-      if (groups[ug].hasOwnProperty('attributeValues')) {
-        for (let attr in groups[ug].attributeValues) {
-          if (groups[ug].attributeValues[attr].attribute.id === attributeID) {
-            if (groups[ug].attributeValues[attr].value === 'true') {
-              g[ug] = groups[ug];
-            }
-          }
-        }
-      }
-    }
-    return g;
-  },
+  //   //only keep the groups that are in our DASH_USERGROUPS_CODE
+  //   let g = {};
+  //   for (let ug of Object.keys(groups)) {
+  //     if (groups[ug].hasOwnProperty('attributeValues')) {
+  //       for (let attr in groups[ug].attributeValues) {
+  //         if (groups[ug].attributeValues[attr].attribute.id === attributeID) {
+  //           if (groups[ug].attributeValues[attr].value === 'true') {
+  //             g[ug] = groups[ug];
+  //           }
+  //         }
+  //       }
+  //     }
+  //   }
+  //   return g;
+  // },
 
   async getGroupLoginStats(groupID) {
     let res = {};
@@ -263,13 +274,18 @@ export default React.createClass({
   
     <Paper className='item'>
       <p>{d2.i18n.getTranslation("app_ttl_filterUser")}</p>
-      <FilterGroups value={this.state.filterBy}
+      {/* <FilterGroups value={this.state.filterBy}
         onFilterChange={this.handleFilterChange}
         groups={this.props.groups}
         groupsfiltered={this.state.userGroupsFiltered}
         disabled={this.state.processing}
         clearSelected={this.clearAllSelected}
-      />
+      /> */}
+        <FilterBy value={this.state.filterBy}
+        onFilterChange={this.handleFilterChange}
+        groups={this.state.userGroups}
+        ouRoot={this.props.ouRoot}
+       />
       <div style={{height:35}}></div>
       <RaisedButton
         label={d2.i18n.getTranslation("app_btn_update")}

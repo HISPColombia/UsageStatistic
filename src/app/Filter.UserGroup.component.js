@@ -16,7 +16,7 @@ export default React.createClass({
         d2: React.PropTypes.object,
         groups: React.PropTypes.object.isRequired,
         onFilterChange: React.PropTypes.func.isRequired,
-        groupsfiltered:React.PropTypes.object,
+        //groupsfiltered:React.PropTypes.object,
         disabled:React.PropTypes.bool,
         clearSelected:React.PropTypes.func.isRequired,
 
@@ -44,10 +44,10 @@ export default React.createClass({
          userGroups:this.props.groups,
          disabledFilter:this.props.disabledFilter
       });
-      if(this.state.loadFilter){
-        this.checkGrupPreselected(this.props.groupsfiltered);
-        this.state.loadFilter=false;
-      }
+      // if(this.state.loadFilter){
+      //   this.checkGrupPreselected(this.props.groupsfiltered);
+      //   this.state.loadFilter=false;
+      // }
         
     },
 
@@ -66,11 +66,11 @@ export default React.createClass({
     },
     
     //check group preloaded
-    checkGrupPreselected(groupSelected){
-      for (let i in groupSelected){
-        this.checkbutton(groupSelected[i].id);
-      }
-    },
+    // checkGrupPreselected(groupSelected){
+    //   for (let i in groupSelected){
+    //     this.checkbutton(groupSelected[i].id);
+    //   }
+    // },
     
     //Clicking on the org tree
     handleGroupChange(id) {
