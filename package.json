@@ -33,7 +33,7 @@
   "license": "BAO Systems, Inc.",
   "dependencies": {
     "highcharts": "^5.0.6",
-    "jquery": "^2.2.3",
+    "jquery": "^3.4.0",
     "node-sass": "^4.13.0",
     "uglifyjs-webpack-plugin": "^1.2.5"
   },
