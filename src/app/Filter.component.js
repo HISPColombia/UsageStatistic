@@ -1,12 +1,10 @@
 import React from 'react';
 
-import { getInstance } from 'd2/lib/d2';
 import OrgUnitTree from 'd2-ui/lib/org-unit-tree/OrgUnitTree.component';
-
 import SelectField from 'material-ui/SelectField';
 import MenuItem from 'material-ui/MenuItem';
 import FilterGroup from './Filter.UserGroup.component.js';
-
+import TextField from 'material-ui/TextField';
 // TODO: Rewrite as ES6 class
 /* eslint-disable react/prefer-es6-class */
 export default React.createClass({
@@ -27,6 +25,8 @@ export default React.createClass({
     getInitialState() {
         return {
           filterBy:'none', 
+          filterOU:[],
+          filterName:"",
           filter:null,   // none, group, ou
           selected:[],
           ouRoot:null,        // top of the OU tree, needed for OrgUnitTree
@@ -34,6 +34,7 @@ export default React.createClass({
           disabledFilter:true,
           userGroupsFiltered: {},
           processing:false,
+          DisplayNameSelected:[]
         };
     },
 
@@ -43,7 +44,7 @@ export default React.createClass({
       if (this.props.hasOwnProperty('ouRoot')){
         our = this.props.ouRoot;
       }
-      this.setState({
+         this.setState({
         userGroups:this.props.groups,
         ouRoot:our,
         disabledFilter:this.props.disabledFilter
@@ -88,15 +89,32 @@ export default React.createClass({
     },
 
     handleSelectedOrgUnit(event, orgUnit) {
-      this.setState(state => {
-          if (state.selected[0] === orgUnit.path) {
-              return { selected: [] };
-          }
+      var selected=this.state.selected
+      var DisplayNameSelected=this.state.DisplayNameSelected
 
-          return { selected: [orgUnit.path] };
-      });
-      this.props.onFilterChange(this.state.filterBy,(orgUnit.id === this.state.selected[0])?null:orgUnit.id);
-
+      if(this.props.multiselect!=true){
+        
+            if (selected[0] === orgUnit.path) {
+              selected=[]             
+              DisplayNameSelected=[]
+            }
+            else{
+              selected=[orgUnit.path] 
+              DisplayNameSelected=[orgUnit.displayName]
+            }
+      }
+      else{
+          if (selected.includes(orgUnit.path)) {    
+              selected.splice(selected.indexOf(orgUnit.path), 1);  
+              DisplayNameSelected.splice(DisplayNameSelected.indexOf(orgUnit.displayName), 1);              
+          } else {
+              selected.push(orgUnit.path);    
+              DisplayNameSelected.push(orgUnit.displayName)     
+          }          
+      }
+      //this.props.onFilterChange(this.state.filterBy,(orgUnit.id === this.state.selected[0])?null:orgUnit.id);
+      this.props.onFilterChange(this.state.filterBy,selected,DisplayNameSelected)
+      this.setState({selected,DisplayNameSelected});
   },
 
 
@@ -107,19 +125,56 @@ export default React.createClass({
       });
       this.props.onFilterChange(this.state.filterBy,value);
     },
-
+      //get the top of the OU tree
+    async searchByName(event, newValue){
+       let nroot= await this.props.changeRoot(newValue)
+       var filterOU= nroot.map(ou=>{
+         return ou.path
+       })
+       this.setState({filterName:newValue,filterOU:filterOU})      
+      },
     //Show the OU tree if that is the current filter
     getOUTree(){
+      const selStyle = {
+        borderTop: '1px solid #eeeeee',
+        margin: '16px -16px 0',
+        padding: '16px 16px 0',
+      };
       if (this.state.filterBy === 'ou'){
           return (
+            <div>
+              <TextField
+            hintText="Write here the OU name"
+            floatingLabelText="Seach by name"
+            floatingLabelFixed={true}
+            onChange={this.searchByName}
+            value={this.state.filterName}
+          />
             <div style={{height:'150px',overflowY:'scroll'}}>
             <OrgUnitTree
-              root={this.state.ouRoot}
+              root={this.state.filterOU.length==0&&this.state.filterName!=""?{}:this.state.ouRoot}
               onSelectClick={this.handleSelectedOrgUnit}
               selected={this.state.selected}
-              hideCheckboxes
-            />
+              hideCheckboxes 
+              orgUnitsPathsToInclude={this.state.filterOU}             
+            />   </div>
+            {/* 
+             
+            {this.props.multiselect?
+            
+             <div style={selStyle}>
+                    <TreeView label={`Selected: ${this.state.selected.length}`}>
+                        <ul>{
+                            this.state.selected
+                                .sort()
+                                .map(i => <li key={i}>{i}</li>)
+                        }</ul>
+                    </TreeView>
+                </div>
+                 :""} */}
             </div>
+           
+         
           );
       }
       return null;

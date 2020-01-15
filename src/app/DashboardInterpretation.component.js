@@ -74,16 +74,17 @@ export default React.createClass({
   initReport() {
     //init object
     let groups = this.props.groups;
-    let filtered = this.filterGroups(groups);
-    let arrUg=Object.keys(filtered);
+    //let filtered = this.filterGroups(groups);
+    //let arrUg=Object.keys(filtered);
     //get grouo with statistic information
-    this.handleReportStatus().then(respGroup=>{    
-       //setting statistic information to group preselected       
-       for (let ug of arrUg ) {
-        this.addGroup(ug) 
-      }
-      this.setState({renderListGroups:true,renderChart:true});
-    })    
+    // this.handleReportStatus().then(respGroup=>{    
+    //    //setting statistic information to group preselected       
+    //    for (let ug of arrUg ) {
+    //     this.addGroup(ug) 
+    //   }
+     
+    // })
+    this.setState({renderListGroups:true,renderChart:true});    
   },
 
 

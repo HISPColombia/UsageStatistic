@@ -1,7 +1,5 @@
 import React from 'react';
 
-import { getInstance } from 'd2/lib/d2';
-import OrgUnitTree from 'd2-ui/lib/org-unit-tree/OrgUnitTree.component';
 
 
 import Paper from 'material-ui/Paper';
@@ -16,11 +14,10 @@ import MenuItem from 'material-ui/MenuItem';
 import CheckboxUI from 'material-ui/Checkbox';
 import TextField from 'material-ui/TextField';
 import Slider from 'material-ui/Slider';
-import { green500, red500 } from 'material-ui/styles/colors';
+
 
 import FilterBy from './Filter.component.js';
 
-import HelpDialog from './HelpDialog.component';
 import actions from '../actions';
 
 // TODO: Rewrite as ES6 class
