@@ -85,22 +85,7 @@ export default React.createClass({
       renderListGroups:true,
       renderChart:false          
     })
-   // let filtered = this.filterGroups(groups);
-    //let arrUg=Object.keys(filtered)
-    // for (let ug of arrUg ) {
-    //   this.getGroupLoginStats(ug).then(res => {
-    //     filtered[ug]['data'] = res;
-    //     if(arrUg[arrUg.length-1]==ug){
-    //       this.setState({
-    //         userGroupsFiltered: filtered,
-    //         userGroups: this.props.groups,
-    //         waiting: 0,
-    //         renderListGroups:true,
-    //         renderChart:false          
-    //       })
-    //     }        
-    //   });
-    // }
+  
   },
 
   //update how they want to filter the data
@@ -199,85 +184,8 @@ export default React.createClass({
       this.handleFilterChangeOU("ou",this.state.selectedOU,this.state.displayNameSelected)
 
     },
-  // async getChildOUs(value) {
-  //   if (this.state.filterBy === 'ou' && this.state.searchChildOUs === true && this.state.ouRoot.id !== this.state.filter && this.state.filter !== null) {
-  //     this.setState({ processing: true });
-  //     this.getOrgChildren(value).then(children => {
-  //       console.log(children)
-  //       this.setState({ orgChildren: children, processing: false });
-  //     });
-  //   }
-  // },
 
-  //recursively find all children of id. return array of IDs
-  // async getOrgChildrenAnt(id) {
-  //   const d2 = this.props.d2;
-  //   let nodes = [id];
-  //   let m = await d2.models.organisationUnits.get(id);
-  //   if (m.id === id) {
-  //     if (m.hasOwnProperty('children') && m.children !== undefined) {
-  //       if (m.children.size === 0) {
-  //         return nodes;
-  //       }
-  //       for (let child of m.children) {
-  //         let c = await this.getOrgChildren(child[0]);
-  //         nodes = nodes.concat(c);
-  //       }
-  //       return nodes;
-  //     }
-  //     else {   //other way to get no children
-  //       return nodes;
-  //     }
-  //   }
-  //   return nodes;
-  // },
-    //recursively find all children of id. return array of IDs
-    // async getOrgChildren(id) {
-    //   const d2 = this.props.d2;
-    //  const api = d2.Api.getApi();     
-    //  const resource="users"  
-    //  const param="filter=userCredentials.disabled:eq:false&filter=organisationUnits.path:like:"+id+"&fields=id,userCredentials[lastLogin,created]"    
-    //  let res={};
-    //  res = await api.get('/' + resource+"?"+param);
-    //  return res.users.map(user => user.id);
-    //   //return nodes;
-    // },
-
-  //get the UID for our secret sauce attribute
-  // getAttributeID() {
-  //   if (this.state.attributeID !== '') {
-  //     return this.state.attributeID;
-  //   }
-  //   for (let a of Object.keys(this.props.attribs)) {
-  //     if (this.props.attribs[a] === DASH_USERGROUPS_CODE) {
-  //       this.setState({ attributeID: a,renderChart: false });
-  //       return a;
-  //     }
-  //   }
-  //   return '';
-  // },
-  //filter out all non FILTER attributed groups
-  // filterGroups(groups) {
-  //   //find the user group attrib ID for displayable UserGroups on the dashboard
-  //   let attributeID = this.getAttributeID();
-
-  //   //only keep the groups that are in our DASH_USERGROUPS_CODE
-  //   let g = {};
-  //   for (let ug of Object.keys(groups)) {
-  //     if (groups[ug].hasOwnProperty('attributeValues')) {
-  //       for (let attr in groups[ug].attributeValues) {
-  //         if (groups[ug].attributeValues[attr].attribute.id === attributeID) {
-  //           if (groups[ug].attributeValues[attr].value === 'true') {
-  //             g[ug] = groups[ug];
-  //           }
-  //         }
-  //       }
-  //     }
-  //   }
-  //   return g;
-  // },
-
-  async getGroupLoginStats(groupID) {
+    async getGroupLoginStats(groupID) {
     let res = {};
     let previous = 0;
     for (let d in loginStatusRanges) {

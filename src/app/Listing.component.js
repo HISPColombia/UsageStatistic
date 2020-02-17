@@ -265,9 +265,7 @@ export default React.createClass({
     else if (this.state.type === 'stale'&& this.state.filterstatus==true) {
       search.inactiveSince = lastLoginDate.toISOString().substr(0, 10);
     }
-    if (this.state.filterBy === 'ou' && this.state.filter !== false && this.state.filterstatus==true) {
-      search.ou = this.state.filter;
-    }
+
     if (this.state.filterBy === 'group' && this.state.filter !== false && this.state.filterstatus==true) {
         let listUG="";
         for(let gs in this.state.userGroupsFiltered){
@@ -281,40 +279,44 @@ export default React.createClass({
       search.query = this.state.filterUsername;
     }
 
-    if (this.state.filterBy === 'ou' && this.state.searchChildOUs === true) {
-      //get the ou children first
-      this.getOrgChildren(this.state.filter).then(children => {
-        //need to issue multiple queries to get all the children OUs
-        this.getMultiOrgUsers(search, children)
-          .then(res => {
-            this.setState({
-              data: res.data,
-              pager: res.pager,
-              processing: false,
-            });
-          });
-      });
-    }
-    else {
-      api.get('users', search).then(promise => {
-        if (promise.hasOwnProperty('users')) {
-          this.setState({
-            data: promise.users,
-            pager: promise.pager,
-            processing: false,
-          });
-        }
-        else {
-          this.setState({
-            data: [],
-            processing: false,
-          })
-        }
+    if (this.state.filterBy === 'ou' && this.state.filter !== false && this.state.filterstatus==true && this.state.searchChildOUs === false) {
+      var OUIDS=""
+      this.state.filter.forEach((ouPath,index)=>{
+        var uidsPath=ouPath.split("/")
+        OUIDS=OUIDS+","+uidsPath[uidsPath.length-1] 
       })
-        .catch(error => {
-          this.setState({ processing: false, errors: error });
-        });
+
+          search.filter = ['organisationUnits.id:in:[' +OUIDS+"]"];
+          
     }
+    if (this.state.filterBy === 'ou' && this.state.searchChildOUs === true) {
+      this.state.filter.forEach((ouPath,index)=>{
+        var uidsPath=ouPath.split("/")
+        OUIDS=OUIDS+","+uidsPath[uidsPath.length-1] 
+      })
+
+       this.getMultiOrgUsers(search, OUIDS.split(","))
+    }
+   else {
+    api.get('users', search).then(promise => {
+      if (promise.hasOwnProperty('users')) {
+        this.setState({
+          data: promise.users,
+          pager: promise.pager,
+          processing: false,
+        });
+      }
+      else {
+        this.setState({
+          data: [],
+          processing: false,
+        })
+      }
+    })
+      .catch(error => {
+        this.setState({ processing: false, errors: error });
+      });
+   }
 
   },
 
@@ -333,7 +335,27 @@ export default React.createClass({
     }
     return { data: users, pager: pager };
   },
-
+  async getOuRoot(userfilter) {
+    const d2 = this.props.d2;
+    const api = d2.Api.getApi();
+    try {
+      //get OU tree rootUnit
+      let search={
+        fields:"id,path",
+        withinUserHierarchy:true,
+        pageSize:15,
+        query:userfilter
+    }
+      let rootLevel = await api.get('organisationUnits', search);
+      if (rootLevel.organisationUnits!=undefined) {
+        return rootLevel.organisationUnits;
+      }
+    }
+    catch (e) {
+      console.error('Could not access userGroups from API');
+    }
+    return undefined;
+  },
   render() {
     const d2 = this.props.d2;
     let users = this.state.data.map((row) => {
@@ -354,11 +376,17 @@ export default React.createClass({
       }
       else if (this.state.filterBy === 'ou') {
         let found = false;
+        
         for (let g of row.organisationUnits) {
-          if (g.id === this.state.filter) {
-            found = true;
-          }
-          //child OUs
+          this.state.filter.forEach((ouPath,index)=>{
+            var uidsPath=ouPath.split("/")
+            var OUID=uidsPath[uidsPath.length-1] 
+            if (g.id === OUID) {
+              found = true;
+            }
+          })
+          
+            //child OUs
           if (this.state.searchChildOUs === true && this.state.orgChildren.indexOf(g.id) >= 0) {
             found = true;
           }
@@ -387,7 +415,7 @@ export default React.createClass({
               }
             </IconButton>
           </TableRowColumn>
-          <TableRowColumn>{row.userCredentials.lastLogin.substring(0, 10)}</TableRowColumn>
+          <TableRowColumn>{row.userCredentials.lastLogin!=undefined?row.userCredentials.lastLogin.substring(0, 10):"Not loging yet"}</TableRowColumn>
         </TableRow>
       )
     });
@@ -436,6 +464,8 @@ export default React.createClass({
               onFilterChange={this.handleFilterChange}
               groups={this.state.userGroups}
               ouRoot={this.props.ouRoot}
+              multiselect={true}
+              changeRoot={this.getOuRoot}
             />
              <CheckboxUI label={d2.i18n.getTranslation("app_lbl_filter_include_child_ou")}
               checked={this.state.searchChildOUs}

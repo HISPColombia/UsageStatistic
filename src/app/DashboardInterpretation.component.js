@@ -14,7 +14,7 @@ import { green300, lime300, lightGreen300, yellow300, orange300, deepOrange300, 
 import actions from '../actions';
 
 import ChartInterpretation from './Chart.component';
-import FilterBy from './Filter.UserGroup.component.js';
+import FilterBy from './Filter.component.js';
 
 import LoadingMask from 'd2-ui/lib/loading-mask/LoadingMask.component';
 
@@ -74,22 +74,40 @@ export default React.createClass({
   initReport() {
     //init object
     let groups = this.props.groups;
-    //let filtered = this.filterGroups(groups);
-    //let arrUg=Object.keys(filtered);
-    //get grouo with statistic information
-    // this.handleReportStatus().then(respGroup=>{    
-    //    //setting statistic information to group preselected       
-    //    for (let ug of arrUg ) {
-    //     this.addGroup(ug) 
-    //   }
+    let filtered = this.filterGroups(groups);
+    let arrUg=Object.keys(filtered);
+    //get group with statistic information
+    //this.handleReportStatus().then(respGroup=>{    
+       //setting statistic information to group preselected       
+      //  for (let ug of arrUg ) {
+      //   this.addGroup(ug) 
+      // }
      
-    // })
+    //})
     this.setState({renderListGroups:true,renderChart:true});    
   },
 
+//update how they want to filter the data
+handleFilterByChange(filterBy, value,displayNameSelected) {
+  //toggle the search children box if they switch from group to ou
+   this.setState({
+      filterBy,displayNameSelected
+    })
 
+
+    this.setState({userGroupsFiltered:{}})
+    
+    if(value!=null)
+       this.handleReportStatus(value)
+    if (this.state.filterBy === 'ou') {
+      this.handleFilterChangeOU(filterBy, value,displayNameSelected)
+    }
+    else{
+      this.handleFilterChangeUserGRoup(filterBy, value);
+    }
+},
   //THey want to show a specific User group or org here
-  handleFilterChange(filterBy, value) {
+  handleFilterChangeUserGRoup(filterBy, value) {
     this.setState({
       customFilterBy: filterBy,
       customFilter: value,
@@ -159,14 +177,14 @@ export default React.createClass({
     }
     return g;
   },
-  seeReport(){
+  async seeReport(){
     this.setState({renderChart:true});
   },
-  async handleReportStatus() {
-    let responseReport= await this.getReport();
-    let resAgregated = await this.aggregateResult(responseReport);
-    let respChard= await this.SetChart(this.state.UserGroupsAgrupated);    
-    return respChard;
+  async handleReportStatus(id) {
+    let responseReport= await this.getReport(id);
+    await this.aggregateResult(responseReport);
+    return await this.SetChart(this.state.UserGroupsAgrupated);    
+
  },
 
 
@@ -299,12 +317,13 @@ export default React.createClass({
   },
 
   //Find total users in group/ou
-  async  getReport() {
+  async  getReport(id) {
     const d2 = this.props.d2;
     const api = d2.Api.getApi();
     let search = {
       fields: 'id,type,user[name,id,userGroups[id,name,attributeValue]],created,lastUpdated,comments[id,user[name,id,userGroups[id,name,attributeValue]],created,lastUpdated],reportTable[user[id,userGroups[id,name,attributeValue]]]',
-      paging:false
+      paging:false,
+      filter:'user.userGroups.id:in:['+id+']'
     };
     let resultApi = await api.get('interpretations', search)
     if (resultApi.hasOwnProperty('interpretations')) {
@@ -348,14 +367,23 @@ export default React.createClass({
     return (
     <div className="container">
     <Paper className='item'>
-      <p>Add additional groups:</p>
+      {/* <p>Add additional groups:</p>
       <FilterBy value={this.state.filterBy}
         onFilterChange={this.handleFilterChange}
         groups={this.props.groups}
         groupsfiltered={this.state.userGroupsFiltered}
         disabled={this.state.processing}
         clearSelected={this.clearAllSelected}
-      />
+      /> */}
+      <p>{d2.i18n.getTranslation("app_ttl_filterUser")}</p>
+      <FilterBy 
+        value={this.state.filterBy}
+        onFilterChange={this.handleFilterByChange}
+        groups={this.state.userGroups}
+        ouRoot={this.props.ouRoot}
+        multiselect={true}
+        changeRoot={this.getOuRoot}
+       />
       <div style={{height:35}}></div>
       <RaisedButton
         label={d2.i18n.getTranslation("app_btn_update")}
