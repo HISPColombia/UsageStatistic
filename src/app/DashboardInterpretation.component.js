@@ -145,13 +145,14 @@ handleFilterByChange(filterBy, value,displayNameSelected) {
 
   addGroup(uid) {
     let groups = this.state.rawUserGroups;
+    let userGroupsFiltered=this.state.userGroupsFiltered
     if (groups[uid]) {
-      this.state.userGroupsFiltered[uid] = groups[uid];
+      userGroupsFiltered[uid] = groups[uid];
     }
     else {
-      this.state.userGroupsFiltered[uid] = { "id": uid, "displayName": this.props.groups[uid].displayName, "data": { "7 Days": 0, "15 Days": 0, "30 Days": 0, "60 Days": 0, "Older": 0, "None": this.props.groups[uid].users.length } };
+      userGroupsFiltered[uid] = { "id": uid, "displayName": this.props.groups[uid].displayName, "data": { "7 Days": 0, "15 Days": 0, "30 Days": 0, "60 Days": 0, "Older": 0, "None": this.props.groups[uid].users.length } };
     }
-    this.setState({ waiting: 0, renderChart:false,processing: false });
+    this.setState({ waiting: 0, renderChart:false,processing: false, userGroupsFiltered });
   },
 
   //filter out all non FILTER attributed groups
