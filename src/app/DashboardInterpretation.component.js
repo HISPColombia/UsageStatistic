@@ -8,6 +8,7 @@ import { Table, TableBody, TableHeader, TableHeaderColumn, TableRow, TableRowCol
 import CircularProgress from 'material-ui/CircularProgress';
 import RaisedButton from 'material-ui/RaisedButton';
 import FontIcon from 'material-ui/FontIcon';
+import CheckboxUI from 'material-ui/Checkbox';
 
 import { green300, lime300, lightGreen300, yellow300, orange300, deepOrange300, red300 } from 'material-ui/styles/colors';
 
@@ -47,6 +48,7 @@ export default React.createClass({
       userGroupsFiltered: {},  // default display groups
       rawUserGroups: {},
       UserGroupsAgrupated:{},
+      organisationUnitAgrupated:{},
       customFilterBy: null,
       customFilter: null,
 
@@ -98,14 +100,39 @@ handleFilterByChange(filterBy, value,displayNameSelected) {
     this.setState({userGroupsFiltered:{}})
     
     if(value!=null)
-       this.handleReportStatus(value)
-    if (this.state.filterBy === 'ou') {
-      this.handleFilterChangeOU(filterBy, value,displayNameSelected)
-    }
-    else{
-      this.handleFilterChangeUserGRoup(filterBy, value);
-    }
+      if (this.state.filterBy === 'ou') {
+        var OUIList="";
+        
+        value.forEach(v => {
+          var uidsPath=v.split("/");
+          var OUID=uidsPath[uidsPath.length-1];
+         
+          OUIList=OUIList+","+OUID;
+        });
+       this.handleReportStatus(OUIList,displayNameSelected)       
+        this.handleFilterChangeOU(filterBy, value)
+      }
+      else{
+        this.handleReportStatus(value)
+          this.handleFilterChangeUserGRoup(filterBy, value);
+      }
+
 },
+ //Include Child OUs checkbox
+ handleFilterChildOUs(event, value) {
+  this.setState({ searchChildOUs: value });
+  this.handleFilterChangeOU("ou",this.state.customFilter)
+
+},
+  //THey want to show a specific User group or org here
+  handleFilterChangeOU(filterBy, value) {
+    this.setState({
+      customFilterBy: filterBy,
+      customFilter: value,
+      processing: true,
+      renderChart:false
+    });
+  },
   //THey want to show a specific User group or org here
   handleFilterChangeUserGRoup(filterBy, value) {
     this.setState({
@@ -181,13 +208,57 @@ handleFilterByChange(filterBy, value,displayNameSelected) {
   async seeReport(){
     this.setState({renderChart:true});
   },
-  async handleReportStatus(id) {
-    let responseReport= await this.getReport(id);
-    await this.aggregateResult(responseReport);
-    return await this.SetChart(this.state.UserGroupsAgrupated);    
-
+  async setEmptyUIReport(id,aggregateCaregory,ouName){
+    //agrega OU sin datos para visualizar en el C
+     let users = await this.getUserByOU(id)
+      //let NumUser=  this.getGroup(dataValue.userGroupId); 
+     
+      aggregateCaregory[1][id] = { "id": id, "displayName": ouName, "data": { "7 Days": 0, "15 Days": 0, "30 Days": 0, "60 Days": 0, "Older": 0, "None": users.pager.total-1} };
+      this.setState({userGroupsFiltered: aggregateCaregory[1],renderChart:false});
+  },
+  async handleReportStatus(id,displayNameSelected) {
+    if(this.state.searchChildOUs==true && this.state.filterBy === 'ou')
+      var responseReport = await this.getReportinCludeChildOU(id);
+    else
+      var responseReport= await this.getReport(id);
+    if(this.state.filterBy === 'ou'){
+      await this.aggregateResultOU(responseReport);
+      var userGroupsFiltered= await this.SetChartOU(this.state.organisationUnitAgrupated);       
+      id.split(",").forEach(async (_id,index)=>{
+          if(!this.state.organisationUnitAgrupated.find((ou)=>ou.id.includes(_id))){
+            await this.setEmptyUIReport(_id,userGroupsFiltered,displayNameSelected[index-1])
+          }
+      })
+    }      
+    else{
+      await this.aggregateResult(responseReport);
+      if(Object.keys(this.state.UserGroupsAgrupated).length>1){
+         return await this.SetChart(this.state.UserGroupsAgrupated);  
+    }
+      else
+        return {}
+    }
+     
+    
+ 
  },
 
+ //
+ async getReportinCludeChildOU(id) {
+       if(this.state.searchChildOUs==true){
+      let ids=id.split(",");
+      let responseReport=[];
+      ids.forEach(idx=>{   
+        if(idx!="")
+          this.getReport(idx).then( cResp=>{
+            responseReport= responseReport.concat(cResp);
+          });
+      });
+      return responseReport;
+    }
+
+},
+ //
 
   //Get different in days  between two dates.
   getCategory(dateinit, dateend) {
@@ -211,7 +282,8 @@ handleFilterByChange(filterBy, value,displayNameSelected) {
         return ("Older")
     }
   },
-  //agregate API result 
+
+  //agregate API result User Group
 
   async aggregateResult(dataValues) {
     var aggregateValue = [];
@@ -260,17 +332,139 @@ handleFilterByChange(filterBy, value,displayNameSelected) {
     });
   
   },
-  getGroup(uid) {
-    let groups = this.state.userGroups;
-
-    for (let g in groups) {
-      if (g == uid) {
-        return groups[g].users.length;
+  async aggregateResultOU(dataValues) {
+    var aggregateValue = [];
+    var lastdateInterpretation=[];
+    var lastdateComment=[];
+    return  dataValues.map((dataValue) => {
+      if(dataValue.user==undefined){
+        dataValue.user=dataValue.reportTable.user;
       }
-    };
-    return 0;
+      dataValue.user.organisationUnits.map((organisationUnit) => {
+        //verify if user group already there exist in array
+        var index = aggregateValue.findIndex(x => x.id === dataValue.user.id + "-" + organisationUnit.id);
+        if (index === -1) {
+          aggregateValue.push({ "id": dataValue.user.id + "-" + organisationUnit.id, "user": dataValue.user.id, "userName": dataValue.user.name, "created": dataValue.created, "organisationUnitName": organisationUnit.name, "organisationUnitId": organisationUnit.id });
+        }
+        else {
+          var dateInterpretation = new Date(dataValue.created);
+          if (dateInterpretation > lastdateInterpretation[dataValue.user.id]) {
+            aggregateValue[index] = { "id": dataValue.user.id + "-" + organisationUnit.id, "user": dataValue.user.id, "userName": dataValue.user.name, "created": dataValue.created, "organisationUnitName": organisationUnit.name, "organisationUnitId": organisationUnit.id };
+            lastdateInterpretation[dataValue.user.id] = dateInterpretation;
+          }
+        }
+
+      });
+      dataValue.comments.map((dataValuecomm) => {
+        dataValuecomm.user.organisationUnits.map((organisationUnitcomm) => {
+          var indexm = aggregateValue.findIndex(x => x.id === dataValuecomm.user.id + "-" + organisationUnitcomm.id);
+          if (indexm === -1) {
+            aggregateValue.push({ "id": dataValuecomm.user.id + "-" + organisationUnitcomm.id, "user": dataValuecomm.user.id, "userName": dataValuecomm.user.name, "created": dataValuecomm.created, "organisationUnitName": organisationUnitcomm.name, "organisationUnitId": organisationUnitcomm.id });
+          }
+          else {
+            var dateComment = new Date(dataValuecomm.created);
+            if (dateComment > lastdateComment[organisationUnitcomm.id]) {
+              aggregateValue[indexm] = { "id": dataValuecomm.user.id + "-" + organisationUnitcomm.id, "user": dataValuecomm.user.id, "userName": dataValuecomm.user.name, "created": dataValuecomm.created, "organisationUnitName": organisationUnitcomm.name, "organisationUnitId": organisationUnitcomm.id };
+              lastdateComment[organisationUnitcomm.id]=dateComment;
+            }
+          }
+        });
+
+      });
+      if(dataValues[dataValues.length-1].id==dataValue.id){
+        this.setState({organisationUnitAgrupated:aggregateValue,renderChart:false});
+        return aggregateValue;
+      }
+      
+    });
+  
   },
+  // getGroup(uid) {
+  //   let groups = this.state.userGroups;
+
+  //   for (let g in groups) {
+  //     if (g == uid) {
+  //       return groups[g].users.length;
+  //     }
+  //   };
+  //   return 0;
+  // },
   //set result to Chart value  and it group by userGroup counting the number of interprettion created by each user in current group
+    //Find total users in group/ou
+    async getUserByOU(OUID) {
+      if (OUID ==undefined || OUID==null) {
+          return {}
+      }
+      try {
+        var noneCount=0;
+        const d2 = this.props.d2;
+        const api = d2.Api.getApi();
+        let search = {
+          fields: 'id',
+          filter:[],
+        };         
+        if(this.state.searchChildOUs==true)
+          search.filter.push('organisationUnits.path:like:' + OUID);
+        else
+          search.filter.push('organisationUnits.id:eq:' + OUID);       
+        return await api.get('users', search);
+      }
+      catch (e) {
+        console.error("Error:",e,OUID);
+      }
+      return 0;
+    },
+  async SetChartOU(dataValuesAgregated) {
+    var aggregateCaregory = [];
+    var lastdateInterpretation = null;
+    var lastdateComment = null;
+    let fg = {};
+    return dataValuesAgregated.map((dataValue) => {
+      //add Interpretation
+      var currentDate = new Date();
+      let category = this.getCategory(dataValue.created.substring(0, 10), currentDate.toISOString().substring(0, 10));
+      //verify if user grup already there exist in array
+     
+      var index = aggregateCaregory.findIndex(x => (x.id === dataValue.organisationUnitId));
+      try {
+        //if (this.state.userGroups[dataValue.userGroupId] != undefined) {
+          //get list all user 
+          if (aggregateCaregory[dataValue.organisationUnitId] == undefined) {
+
+            //get user by ou
+            this.getUserByOU(dataValue.organisationUnitId).then((users=>{
+                 //let NumUser=  this.getGroup(dataValue.userGroupId); 
+                aggregateCaregory[dataValue.organisationUnitId] = { "id": dataValue.organisationUnitId, "displayName": dataValue.organisationUnitName, "data": { "7 Days": 0, "15 Days": 0, "30 Days": 0, "60 Days": 0, "Older": 0, "None": users.pager.total} };
+                aggregateCaregory[dataValue.organisationUnitId].data[category] = 1;
+                aggregateCaregory[dataValue.organisationUnitId].data["None"]--;
+            }))
+           
+
+          }
+          else {
+            aggregateCaregory[dataValue.organisationUnitId].data["None"]--;
+            if (aggregateCaregory[dataValue.organisationUnitId].data[category])
+              aggregateCaregory[dataValue.organisationUnitId].data[category]++;
+            else
+              aggregateCaregory[dataValue.organisationUnitId].data[category] = 1;
+          }
+       // }
+       // else {
+       //   console.log("El usuario no tiene acceso al grupo " + dataValue.organisationUnitName);
+       // }
+      }
+      catch (err) {
+        console.log("error usuario no tiene acceso al grupo " + dataValue.organisationUnitName);
+      };
+      if(dataValuesAgregated[dataValuesAgregated.length-1].id==dataValue.id){
+        this.setState({userGroupsFiltered:aggregateCaregory,renderChart:false});
+        return aggregateCaregory; 
+      }
+      
+    });
+ 
+  },
+
   async SetChart(dataValuesAgregated) {
     var aggregateCaregory = [];
     var lastdateInterpretation = null;
@@ -322,10 +516,18 @@ handleFilterByChange(filterBy, value,displayNameSelected) {
     const d2 = this.props.d2;
     const api = d2.Api.getApi();
     let search = {
-      fields: 'id,type,user[name,id,userGroups[id,name,attributeValue]],created,lastUpdated,comments[id,user[name,id,userGroups[id,name,attributeValue]],created,lastUpdated],reportTable[user[id,userGroups[id,name,attributeValue]]]',
-      paging:false,
-      filter:'user.userGroups.id:in:['+id+']'
+      fields: 'id,type,user[name,id,userGroups[id,name,attributeValue],organisationUnits[id,path,name]],created,lastUpdated,comments[id,user[name,id,userGroups[id,name,attributeValue],organisationUnits[id,path,name]],created,lastUpdated],reportTable[user[id,userGroups[id,name,attributeValue],organisationUnits[id,path,name]]]', //'id,type,user[name,id,userGroups[id,name,attributeValue,organisationUnits[id,path]]],created,lastUpdated,comments[id,user[name,id,userGroups[id,name,attributeValue],organisationUnits[id,path]]],created,lastUpdated],reportTable[user[id,userGroups[id,name,attributeValue],organisationUnits[id,path]]]]',
+      paging:false
     };
+    if (this.state.filterBy === 'ou') {
+      if(this.state.searchChildOUs)
+        search["filter"]='user.organisationUnits.path:like:['+id+']'
+      else
+        search["filter"]='user.organisationUnits.id:in:['+id+']'
+    }
+    else{
+      search["filter"]='user.userGroups.id:in:['+id+']'
+    }
     let resultApi = await api.get('interpretations', search)
     if (resultApi.hasOwnProperty('interpretations')) {
       return resultApi.interpretations;
@@ -339,13 +541,13 @@ handleFilterByChange(filterBy, value,displayNameSelected) {
     }
   },
   rendercomponents(){
-
+    console.log(this.state.filterBy === 'ou'?this.state.userGroupsFiltered:this.state.userGroupsFiltered)
     const d2 = this.props.d2;
     let options_groups = {
       colors: loginStatusColors,
       chart: { type: 'bar', },
-      title: { text: 'Interpretations and Comments by Group' },
-      xAxis: { categories: [], title: { text: 'User Group' }, },
+      title: { text: (this.state.filterBy === 'ou'?'Interpretations and Comments by Organisation Units':'Interpretations and Comments by Group') },
+      xAxis: { categories: [], title: { text: (this.state.filterBy === 'ou'?'Organisation Units':'User Group') }, },
       yAxis: { min: 0, title: { text: '% of users who have Interpreted or Commented in within X days' } },
       legend: { reversed: false },
       tooltip: {
@@ -385,12 +587,20 @@ handleFilterByChange(filterBy, value,displayNameSelected) {
         multiselect={true}
         changeRoot={this.getOuRoot}
        />
+        {(this.state.filterBy == 'ou')?
+        <CheckboxUI 
+        label={d2.i18n.getTranslation("app_lbl_filter_include_child_ou")}
+        checked={this.state.searchChildOUs}
+        onCheck={this.handleFilterChildOUs}
+        disabled={this.state.filterBy != 'ou' && this.state.customFilter.length==0}
+        labelStyle={{ color: 'grey', fontSize: 'small' }} 
+        />:""}
       <div style={{height:35}}></div>
       <RaisedButton
         label={d2.i18n.getTranslation("app_btn_update")}
         labelPosition="before"
         primary={true}
-        disabled={this.state.processing}
+        //disabled={this.state.processing}
         onClick={this.seeReport}
         icon={<FontIcon className="material-icons">refresh</FontIcon>}
         style={{ 'clear': 'both' }}
@@ -400,7 +610,7 @@ handleFilterByChange(filterBy, value,displayNameSelected) {
 
     <Paper className='item'>
       <h3 className="subdued title_description">{d2.i18n.getTranslation('app_dashboard_user_interpretation')}</h3>
-      <ChartInterpretation container='chartGroups' options={options_groups} groups={this.state.userGroupsFiltered} renderChart={this.state.renderChart}  />
+      <ChartInterpretation container='chartGroups' options={options_groups} groups={(this.state.filterBy === 'ou'?this.state.userGroupsFiltered:this.state.userGroupsFiltered)} renderChart={this.state.renderChart}  />
 
       {(haveGroups === true && haveFilteredGroups === false) ?
         (<p>No user groups with the {DASH_USERGROUPS_CODE} attribute found. Consult the help docs.</p>) : null
